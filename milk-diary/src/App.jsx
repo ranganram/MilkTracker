@@ -517,6 +517,7 @@ export default function MilkTracker() {
         <div style={styles.householdBadge} onClick={() => setShowHouseholdMenu(!showHouseholdMenu)}>
           {household.name} · {members.length} member{members.length !== 1 ? 's' : ''}
         </div>
+        <div style={{ fontSize: '10px', opacity: 0.4, marginTop: '4px' }}>v0.3 — bill detail view</div>
       </div>
 
       {showHouseholdMenu && (
