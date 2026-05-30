@@ -599,54 +599,177 @@ export default function MilkTracker() {
         </>
       )}
 
-      {view === 'bill' && (
-        <>
-          <div style={{ padding: '20px 20px 0', fontSize: '15px', color: '#6B5D4A', textAlign: 'center' }}>
-            {new Date(selectedDate).toLocaleDateString('en-IN', { month: 'long', year: 'numeric' })}
-          </div>
-          <div style={styles.summaryCard}>
-            <div style={{ fontSize: '15px', opacity: 0.7 }}>This Month — Milk Taken</div>
-            <div style={styles.bigNumber}>₹{currentMonth.takenCost.toFixed(0)}</div>
-            <div style={styles.summaryRow}>
-              <div style={styles.summaryItem}><div style={styles.summaryLabel}>Blue</div><div style={styles.summaryValue}>{currentMonth.blueTaken.toFixed(1)}L</div></div>
-              <div style={styles.summaryItem}><div style={styles.summaryLabel}>Orange</div><div style={styles.summaryValue}>{currentMonth.orangeTaken.toFixed(1)}L</div></div>
+      {view === 'bill' && (() => {
+        // Net L this month: positive = extra net, negative = skipped net
+        const blueNet = currentMonth.blueExtra - currentMonth.blueSkipped;
+        const orangeNet = currentMonth.orangeExtra - currentMonth.orangeSkipped;
+
+        // Next month projection: assume normal delivery × days at current rate
+        const nextMonthDate = (() => {
+          const [yr, mo] = currentMonthPrefix.split('-').map(Number);
+          const nextMo = mo === 12 ? 1 : mo + 1;
+          const nextYr = mo === 12 ? yr + 1 : yr;
+          return `${nextYr}-${String(nextMo).padStart(2, '0')}`;
+        })();
+        const [nYr, nMo] = nextMonthDate.split('-').map(Number);
+        const nextMonthDays = daysInMonth(nYr, nMo);
+        const projectionRate = getRateForDate(`${nextMonthDate}-01`) || currentRate;
+        const projectedBlueL = defaults.blue * nextMonthDays;
+        const projectedOrangeL = defaults.orange * nextMonthDays;
+        const projectedCost = projectionRate
+          ? (projectedBlueL * 2 * projectionRate.bluePerHalf) + (projectedOrangeL * 2 * projectionRate.orangePerHalf)
+          : 0;
+
+        // Net deduction from last month
+        const lastMonthDeduction = lastMonthNetCredit; // positive = credit (subtract)
+
+        const nextMonthBill = projectedCost - lastMonthDeduction;
+
+        const monthLabel = new Date(selectedDate).toLocaleDateString('en-IN', { month: 'long', year: 'numeric' });
+        const nextMonthLabel = new Date(nextMonthDate + '-01').toLocaleDateString('en-IN', { month: 'long', year: 'numeric' });
+        const lastMonthLabel = new Date(lastMonthPrefix + '-01').toLocaleDateString('en-IN', { month: 'long' });
+
+        return (
+          <>
+            {/* This month so far — quantities, not money */}
+            <div style={styles.sectionTitle}>{monthLabel} so far</div>
+
+            <div style={styles.summaryCard}>
+              <div style={{ fontSize: '15px', opacity: 0.7, marginBottom: '8px' }}>Blue Packet</div>
+              <div style={styles.summaryRow}>
+                <div style={styles.summaryItem}>
+                  <div style={styles.summaryLabel}>Not taken</div>
+                  <div style={{ ...styles.summaryValue, color: '#FBE3D3' }}>{currentMonth.blueSkipped.toFixed(1)}L</div>
+                </div>
+                <div style={styles.summaryItem}>
+                  <div style={styles.summaryLabel}>Extra taken</div>
+                  <div style={{ ...styles.summaryValue, color: '#D5E5F2' }}>{currentMonth.blueExtra.toFixed(1)}L</div>
+                </div>
+                <div style={styles.summaryItem}>
+                  <div style={styles.summaryLabel}>Net</div>
+                  <div style={{ ...styles.summaryValue, color: blueNet === 0 ? '#FFF8EC' : (blueNet > 0 ? '#A8D5F0' : '#F5C9B2') }}>
+                    {blueNet > 0 ? '+' : ''}{blueNet.toFixed(1)}L
+                  </div>
+                </div>
+              </div>
             </div>
-          </div>
-          <div style={{ ...styles.summaryCard, background: lastMonthNetCredit >= 0 ? '#7A3D1E' : '#1E4A7A' }}>
-            <div style={{ fontSize: '15px', opacity: 0.85 }}>
-              Last Month Adjustment ({new Date(lastMonthPrefix + '-01').toLocaleDateString('en-IN', { month: 'long' })})
+
+            <div style={styles.summaryCard}>
+              <div style={{ fontSize: '15px', opacity: 0.7, marginBottom: '8px' }}>Orange Packet</div>
+              <div style={styles.summaryRow}>
+                <div style={styles.summaryItem}>
+                  <div style={styles.summaryLabel}>Not taken</div>
+                  <div style={{ ...styles.summaryValue, color: '#FBE3D3' }}>{currentMonth.orangeSkipped.toFixed(1)}L</div>
+                </div>
+                <div style={styles.summaryItem}>
+                  <div style={styles.summaryLabel}>Extra taken</div>
+                  <div style={{ ...styles.summaryValue, color: '#D5E5F2' }}>{currentMonth.orangeExtra.toFixed(1)}L</div>
+                </div>
+                <div style={styles.summaryItem}>
+                  <div style={styles.summaryLabel}>Net</div>
+                  <div style={{ ...styles.summaryValue, color: orangeNet === 0 ? '#FFF8EC' : (orangeNet > 0 ? '#A8D5F0' : '#F5C9B2') }}>
+                    {orangeNet > 0 ? '+' : ''}{orangeNet.toFixed(1)}L
+                  </div>
+                </div>
+              </div>
             </div>
-            <div style={styles.bigNumber}>{lastMonthNetCredit >= 0 ? '−' : '+'} ₹{Math.abs(lastMonthNetCredit).toFixed(0)}</div>
-            <div style={{ fontSize: '13px', opacity: 0.8, marginTop: '4px' }}>
-              {lastMonthNetCredit > 0 && 'credit from skips'}
-              {lastMonthNetCredit < 0 && 'extra owed for extras'}
-              {lastMonthNetCredit === 0 && 'no adjustment'}
+
+            {/* Effective net this month — in rupees */}
+            <div style={{ ...styles.summaryCard, background: lastMonthNetCredit >= 0 ? '#7A3D1E' : '#1E4A7A' }}>
+              <div style={{ fontSize: '15px', opacity: 0.85 }}>Net effect this month</div>
+              <div style={styles.bigNumber}>
+                {currentMonth.skippedCost - currentMonth.extraCost >= 0 ? '−' : '+'} ₹{Math.abs(currentMonth.skippedCost - currentMonth.extraCost).toFixed(0)}
+              </div>
+              <div style={{ fontSize: '13px', opacity: 0.8, marginTop: '4px' }}>
+                {currentMonth.skippedCost - currentMonth.extraCost > 0 && 'will subtract from next month'}
+                {currentMonth.skippedCost - currentMonth.extraCost < 0 && 'will add to next month'}
+                {currentMonth.skippedCost - currentMonth.extraCost === 0 && 'no change'}
+              </div>
             </div>
-            <div style={styles.summaryRow}>
-              <div style={styles.summaryItem}><div style={styles.summaryLabel}>Skipped</div><div style={styles.summaryValue}>₹{lastMonth.skippedCost.toFixed(0)}</div></div>
-              <div style={styles.summaryItem}><div style={styles.summaryLabel}>Extra</div><div style={styles.summaryValue}>₹{lastMonth.extraCost.toFixed(0)}</div></div>
+
+            {/* Next month projection */}
+            <div style={styles.sectionTitle}>Next month — {nextMonthLabel}</div>
+
+            <div style={styles.billCard}>
+              <div style={{ fontSize: '15px', color: '#6B5D4A', marginBottom: '12px', textAlign: 'center' }}>
+                If she takes normal delivery for all {nextMonthDays} days
+              </div>
+              <div style={styles.billRow}>
+                <span><span style={{ color: BLUE, fontWeight: 700 }}>Blue:</span> {defaults.blue}L × {nextMonthDays} days</span>
+                <span style={{ fontWeight: 700 }}>{projectedBlueL.toFixed(1)}L</span>
+              </div>
+              <div style={styles.billRow}>
+                <span><span style={{ color: ORANGE, fontWeight: 700 }}>Orange:</span> {defaults.orange}L × {nextMonthDays} days</span>
+                <span style={{ fontWeight: 700 }}>{projectedOrangeL.toFixed(1)}L</span>
+              </div>
+
+              {!projectionRate && (
+                <div style={{ ...styles.emptyState, padding: '16px 0' }}>
+                  Set a rate to see cost
+                </div>
+              )}
+
+              {projectionRate && (
+                <>
+                  <div style={{ borderTop: '1px solid #E8DCC4', marginTop: '12px', paddingTop: '12px' }}>
+                    <div style={styles.billRow}>
+                      <span>At rate {projectionRate.startDate === currentRate?.startDate ? '(current)' : ''}</span>
+                      <span style={{ fontWeight: 700 }}>₹{projectedCost.toFixed(0)}</span>
+                    </div>
+                    <div style={styles.billRow}>
+                      <span>Subtract: {lastMonthLabel} adjustment</span>
+                      <span style={{ fontWeight: 700, color: lastMonthDeduction >= 0 ? '#A63D2A' : '#1E4A7A' }}>
+                        {lastMonthDeduction >= 0 ? '−' : '+'} ₹{Math.abs(lastMonthDeduction).toFixed(0)}
+                      </span>
+                    </div>
+                  </div>
+                  <div style={{ borderTop: '2px solid #2A2118', marginTop: '4px', paddingTop: '16px', textAlign: 'center' }}>
+                    <div style={{ fontSize: '17px', color: '#6B5D4A' }}>Pay next month</div>
+                    <div style={{ fontSize: '52px', fontWeight: '800', letterSpacing: '-1px' }}>₹{nextMonthBill.toFixed(0)}</div>
+                  </div>
+                </>
+              )}
             </div>
-          </div>
-          <div style={styles.billCard}>
-            <div style={{ fontSize: '17px', color: '#6B5D4A', marginBottom: '4px', textAlign: 'center' }}>Pay this month</div>
-            <div style={{ fontSize: '52px', fontWeight: '800', letterSpacing: '-1px', textAlign: 'center' }}>₹{billPayable.toFixed(0)}</div>
-            <div style={{ borderTop: '1px solid #E8DCC4', marginTop: '16px', paddingTop: '12px' }}>
-              <div style={styles.billRow}><span>This month's milk</span><span style={{ fontWeight: 700 }}>₹{currentMonth.takenCost.toFixed(0)}</span></div>
-              <div style={styles.billRow}><span>Last month skips</span><span style={{ fontWeight: 700, color: '#A63D2A' }}>− ₹{lastMonth.skippedCost.toFixed(0)}</span></div>
-              <div style={styles.billRow}><span>Last month extras</span><span style={{ fontWeight: 700, color: '#1E4A7A' }}>+ ₹{lastMonth.extraCost.toFixed(0)}</span></div>
-              <div style={{ ...styles.billRow, borderTop: '2px solid #2A2118', marginTop: '4px', fontWeight: 800 }}><span>Total</span><span>₹{billPayable.toFixed(0)}</span></div>
+
+            {/* Last month's breakdown — what she'll subtract */}
+            <div style={styles.sectionTitle}>Last month ({lastMonthLabel}) details</div>
+            <div style={styles.rateCard}>
+              <div style={styles.billRow}>
+                <span><span style={{ color: BLUE, fontWeight: 700 }}>Blue</span> not taken</span>
+                <span style={{ fontWeight: 700 }}>{lastMonth.blueSkipped.toFixed(1)}L</span>
+              </div>
+              <div style={styles.billRow}>
+                <span><span style={{ color: BLUE, fontWeight: 700 }}>Blue</span> extra taken</span>
+                <span style={{ fontWeight: 700 }}>{lastMonth.blueExtra.toFixed(1)}L</span>
+              </div>
+              <div style={styles.billRow}>
+                <span><span style={{ color: ORANGE, fontWeight: 700 }}>Orange</span> not taken</span>
+                <span style={{ fontWeight: 700 }}>{lastMonth.orangeSkipped.toFixed(1)}L</span>
+              </div>
+              <div style={styles.billRow}>
+                <span><span style={{ color: ORANGE, fontWeight: 700 }}>Orange</span> extra taken</span>
+                <span style={{ fontWeight: 700 }}>{lastMonth.orangeExtra.toFixed(1)}L</span>
+              </div>
+              <div style={{ borderTop: '1px solid #E8DCC4', marginTop: '8px', paddingTop: '12px' }}>
+                <div style={styles.billRow}>
+                  <span>Value of skips</span>
+                  <span style={{ fontWeight: 700, color: '#A63D2A' }}>− ₹{lastMonth.skippedCost.toFixed(0)}</span>
+                </div>
+                <div style={styles.billRow}>
+                  <span>Value of extras</span>
+                  <span style={{ fontWeight: 700, color: '#1E4A7A' }}>+ ₹{lastMonth.extraCost.toFixed(0)}</span>
+                </div>
+                <div style={{ ...styles.billRow, fontWeight: 800, borderTop: '2px solid #2A2118', marginTop: '4px', paddingTop: '8px' }}>
+                  <span>Net to subtract</span>
+                  <span style={{ color: lastMonthDeduction >= 0 ? '#A63D2A' : '#1E4A7A' }}>
+                    {lastMonthDeduction >= 0 ? '−' : '+'} ₹{Math.abs(lastMonthDeduction).toFixed(0)}
+                  </span>
+                </div>
+              </div>
             </div>
-          </div>
-          <div style={{ ...styles.summaryCard, background: '#1E5B9E' }}>
-            <div style={{ fontSize: '15px', opacity: 0.85 }}>This Month so far</div>
-            <div style={{ fontSize: '13px', opacity: 0.7, marginTop: '4px' }}>(applies to next month's bill)</div>
-            <div style={styles.summaryRow}>
-              <div style={styles.summaryItem}><div style={styles.summaryLabel}>Skipped</div><div style={styles.summaryValue}>₹{currentMonth.skippedCost.toFixed(0)}</div></div>
-              <div style={styles.summaryItem}><div style={styles.summaryLabel}>Extra</div><div style={styles.summaryValue}>₹{currentMonth.extraCost.toFixed(0)}</div></div>
-            </div>
-          </div>
-        </>
-      )}
+          </>
+        );
+      })()}
 
       {view === 'history' && (
         <>
