@@ -517,7 +517,7 @@ export default function MilkTracker() {
         <div style={styles.householdBadge} onClick={() => setShowHouseholdMenu(!showHouseholdMenu)}>
           {household.name} · {members.length} member{members.length !== 1 ? 's' : ''}
         </div>
-        <div style={{ fontSize: '10px', opacity: 0.4, marginTop: '4px' }}>v0.4 — advance payment model</div>
+        <div style={{ fontSize: '10px', opacity: 0.4, marginTop: '4px' }}>v0.5 — paise precision</div>
       </div>
 
       {showHouseholdMenu && (
@@ -681,7 +681,7 @@ export default function MilkTracker() {
             <div style={{ ...styles.summaryCard, background: thisMonthDeduction >= 0 ? '#7A3D1E' : '#1E4A7A' }}>
               <div style={{ fontSize: '15px', opacity: 0.85 }}>{monthLabel} net effect</div>
               <div style={styles.bigNumber}>
-                {thisMonthDeduction >= 0 ? '−' : '+'} ₹{Math.abs(thisMonthDeduction).toFixed(0)}
+                {thisMonthDeduction >= 0 ? '−' : '+'} ₹{Math.abs(thisMonthDeduction).toFixed(2)}
               </div>
               <div style={{ fontSize: '13px', opacity: 0.8, marginTop: '4px' }}>
                 {thisMonthDeduction > 0 && `subtract from ${nextMonthLabel.split(' ')[0]} payment`}
@@ -717,18 +717,18 @@ export default function MilkTracker() {
                   <div style={{ borderTop: '1px solid #E8DCC4', marginTop: '12px', paddingTop: '12px' }}>
                     <div style={styles.billRow}>
                       <span>Full month cost</span>
-                      <span style={{ fontWeight: 700 }}>₹{projectedCost.toFixed(0)}</span>
+                      <span style={{ fontWeight: 700 }}>₹{projectedCost.toFixed(2)}</span>
                     </div>
                     <div style={styles.billRow}>
                       <span>Subtract {monthLabel.split(' ')[0]} balance</span>
                       <span style={{ fontWeight: 700, color: thisMonthDeduction >= 0 ? '#A63D2A' : '#1E4A7A' }}>
-                        {thisMonthDeduction >= 0 ? '−' : '+'} ₹{Math.abs(thisMonthDeduction).toFixed(0)}
+                        {thisMonthDeduction >= 0 ? '−' : '+'} ₹{Math.abs(thisMonthDeduction).toFixed(2)}
                       </span>
                     </div>
                   </div>
                   <div style={{ borderTop: '2px solid #2A2118', marginTop: '4px', paddingTop: '16px', textAlign: 'center' }}>
                     <div style={{ fontSize: '17px', color: '#6B5D4A' }}>Pay milkman</div>
-                    <div style={{ fontSize: '52px', fontWeight: '800', letterSpacing: '-1px' }}>₹{nextMonthBill.toFixed(0)}</div>
+                    <div style={{ fontSize: '52px', fontWeight: '800', letterSpacing: '-1px' }}>₹{nextMonthBill.toFixed(2)}</div>
                   </div>
                 </>
               )}
@@ -756,16 +756,16 @@ export default function MilkTracker() {
               <div style={{ borderTop: '1px solid #E8DCC4', marginTop: '8px', paddingTop: '12px' }}>
                 <div style={styles.billRow}>
                   <span>Value of skips</span>
-                  <span style={{ fontWeight: 700, color: '#A63D2A' }}>− ₹{currentMonth.skippedCost.toFixed(0)}</span>
+                  <span style={{ fontWeight: 700, color: '#A63D2A' }}>− ₹{currentMonth.skippedCost.toFixed(2)}</span>
                 </div>
                 <div style={styles.billRow}>
                   <span>Value of extras</span>
-                  <span style={{ fontWeight: 700, color: '#1E4A7A' }}>+ ₹{currentMonth.extraCost.toFixed(0)}</span>
+                  <span style={{ fontWeight: 700, color: '#1E4A7A' }}>+ ₹{currentMonth.extraCost.toFixed(2)}</span>
                 </div>
                 <div style={{ ...styles.billRow, fontWeight: 800, borderTop: '2px solid #2A2118', marginTop: '4px', paddingTop: '8px' }}>
                   <span>Net to subtract</span>
                   <span style={{ color: thisMonthDeduction >= 0 ? '#A63D2A' : '#1E4A7A' }}>
-                    {thisMonthDeduction >= 0 ? '−' : '+'} ₹{Math.abs(thisMonthDeduction).toFixed(0)}
+                    {thisMonthDeduction >= 0 ? '−' : '+'} ₹{Math.abs(thisMonthDeduction).toFixed(2)}
                   </span>
                 </div>
               </div>
@@ -794,7 +794,7 @@ export default function MilkTracker() {
                   </div>
                 </div>
                 <div style={{ fontSize: '20px', fontWeight: '800', color: netCost > 0 ? '#1E4A7A' : '#A63D2A' }}>
-                  {netCost > 0 ? '+' : ''}₹{netCost.toFixed(0)}
+                  {netCost > 0 ? '+' : ''}₹{netCost.toFixed(2)}
                 </div>
               </div>
             );
